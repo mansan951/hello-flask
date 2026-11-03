@@ -1,3 +1,6 @@
+cd ~/hello-flask
+
+cat > Jenkinsfile << 'EOF'
 pipeline {
     agent any
 
@@ -32,6 +35,13 @@ pipeline {
                 sh 'docker push $IMAGE:latest'
             }
         }
+
+        stage('Deploy') {
+            steps {
+                sh 'docker rm -f hello-flask || true'
+                sh 'docker run -d --name hello-flask -p 5000:5000 --restart unless-stopped $IMAGE:$BUILD_NUMBER'
+            }
+        }
     }
 
     post {
@@ -40,3 +50,4 @@ pipeline {
         }
     }
 }
+EOF
