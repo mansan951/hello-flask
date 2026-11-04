@@ -1,6 +1,3 @@
-cd ~/hello-flask
-
-cat > Jenkinsfile << 'EOF'
 pipeline {
     agent any
 
@@ -50,4 +47,3 @@ pipeline {
         }
     }
 }
-EOF
