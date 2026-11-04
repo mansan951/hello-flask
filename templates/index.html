@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manoj Thanet | Hello Flask Jenkins CI/CD Demo</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            900: '#14532d',
+                        },
+                        jenkins: {
+                            red: '#ee3124',
+                            blue: '#335061',
+                            dark: '#0f172a',
+                            accent: '#38bdf8'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'Monaco', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #090d16;
+            color: #f1f5f9;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .terminal-bg {
+            background-color: #030712;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .pulse-glow {
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .animate-pulse-ring {
+            animation: pulse-ring 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-brand-500 selection:text-black">
+
+    <!-- Top Navigation -->
+    <header class="glass-panel sticky top-0 z-50 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand / Logo -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20">
+                        <i class="fa-brands fa-jenkins text-xl"></i>
+                    </div>
+                    <div>
+                        <span class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                            Manoj Thanet
+                            <span class="text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full font-mono">DevOps CI/CD</span>
+                        </span>
+                        <p class="text-xs text-slate-400">Flask + Docker + Jenkins Pipeline</p>
+                    </div>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="flex items-center space-x-3">
+                    <button id="triggerBuildBtn" onclick="runSimulatedBuild()" class="flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium text-sm px-4 py-2 rounded-lg transition-all duration-200 shadow-lg shadow-emerald-500/25 active:scale-95">
+                        <i class="fa-solid fa-play text-xs"></i>
+                        <span>Trigger Jenkins Build</span>
+                    </button>
+                    <a href="https://github.com/mansan951/hello-flask" target="_blank" class="glass-card hover:bg-slate-800 text-slate-300 hover:text-white text-sm px-3.5 py-2 rounded-lg transition-all flex items-center gap-2 border border-slate-700">
+                        <i class="fa-brands fa-github text-base"></i>
+                        <span class="hidden sm:inline">GitHub Repo</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-grow space-y-8">
+
+        <!-- Hero Status Banner -->
+        <div class="relative overflow-hidden rounded-2xl glass-panel p-6 sm:p-8 border border-slate-800">
+            <div class="absolute -right-10 -bottom-10 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute right-40 top-0 w-60 h-60 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div>
+                    <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-3">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>LIVE DEMO ENVIRONMENT</span>
+                    </div>
+                    <h1 class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+                        Hello Manoj Thanet! <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">Flask CI/CD Active</span>
+                    </h1>
+                    <p class="mt-2 text-slate-400 max-w-2xl text-sm sm:text-base leading-relaxed">
+                        Automated multi-stage Docker build, pytest validation, and seamless deployment pipeline configured via Jenkins SCM.
+                    </p>
+                </div>
+
+                <!-- Quick Metrics Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full lg:w-auto">
+                    <div class="glass-card p-3.5 rounded-xl text-center border border-slate-800">
+                        <span class="text-xs text-slate-400 font-medium block uppercase tracking-wider">Status</span>
+                        <span class="text-sm font-bold text-emerald-400 flex items-center justify-center gap-1.5 mt-1">
+                            <i class="fa-solid fa-circle-check text-xs"></i> Healthy
+                        </span>
+                    </div>
+                    <div class="glass-card p-3.5 rounded-xl text-center border border-slate-800">
+                        <span class="text-xs text-slate-400 font-medium block uppercase tracking-wider">Port</span>
+                        <span class="text-sm font-bold text-cyan-400 font-mono mt-1 block">5000:5000</span>
+                    </div>
+                    <div class="glass-card p-3.5 rounded-xl text-center border border-slate-800 col-span-2 sm:col-span-1">
+                        <span class="text-xs text-slate-400 font-medium block uppercase tracking-wider">Image Tag</span>
+                        <span id="currentImageTag" class="text-sm font-bold text-amber-400 font-mono mt-1 block">manoj053/hello-flask:v11</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pipeline Workflow Visualizer Section -->
+        <section class="space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-diagram-project text-cyan-400 text-lg"></i>
+                        Jenkins Pipeline Visualizer
+                    </h2>
+                    <p class="text-xs text-slate-400">Click any stage to view step logs and shell execution details.</p>
+                </div>
+                <div class="text-xs text-slate-400 font-mono bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                    <span>Executor: master-node-vm</span>
+                </div>
+            </div>
+
+            <!-- Stage Progress Nodes -->
+            <div class="glass-panel p-6 rounded-2xl border border-slate-800">
+                <div class="grid grid-cols-1 sm:grid-cols-5 gap-3 relative" id="pipelineStages">
+                    
+                    <!-- Stage 1: Checkout -->
+                    <button onclick="selectStage(0)" id="stage-btn-0" class="stage-card p-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-left transition-all hover:scale-[1.02] cursor-pointer relative overflow-hidden group">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-slate-400 font-mono">Stage #1</span>
+                            <i id="stage-icon-0" class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+                        </div>
+                        <h3 class="font-semibold text-white text-sm">1. Checkout</h3>
+                        <p class="text-xs text-slate-400 mt-1 truncate">Git SCM pull</p>
+                        <div class="mt-3 text-[10px] font-mono text-emerald-400 flex items-center gap-1">
+                            <i class="fa-regular fa-clock"></i> <span id="stage-time-0">1.2s</span>
+                        </div>
+                    </button>
+
+                    <!-- Stage 2: Test -->
+                    <button onclick="selectStage(1)" id="stage-btn-1" class="stage-card p-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-left transition-all hover:scale-[1.02] cursor-pointer relative overflow-hidden group">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-slate-400 font-mono">Stage #2</span>
+                            <i id="stage-icon-1" class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+                        </div>
+                        <h3 class="font-semibold text-white text-sm">2. Test</h3>
+                        <p class="text-xs text-slate-400 mt-1 truncate">Pytest validation</p>
+                        <div class="mt-3 text-[10px] font-mono text-emerald-400 flex items-center gap-1">
+                            <i class="fa-regular fa-clock"></i> <span id="stage-time-1">14.5s</span>
+                        </div>
+                    </button>
+
+                    <!-- Stage 3: Build Image -->
+                    <button onclick="selectStage(2)" id="stage-btn-2" class="stage-card p-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-left transition-all hover:scale-[1.02] cursor-pointer relative overflow-hidden group">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-slate-400 font-mono">Stage #3</span>
+                            <i id="stage-icon-2" class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+                        </div>
+                        <h3 class="font-semibold text-white text-sm">3. Build Image</h3>
+                        <p class="text-xs text-slate-400 mt-1 truncate">Docker multi-stage</p>
+                        <div class="mt-3 text-[10px] font-mono text-emerald-400 flex items-center gap-1">
+                            <i class="fa-regular fa-clock"></i> <span id="stage-time-2">22.1s</span>
+                        </div>
+                    </button>
+
+                    <!-- Stage 4: Push to Hub -->
+                    <button onclick="selectStage(3)" id="stage-btn-3" class="stage-card p-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-left transition-all hover:scale-[1.02] cursor-pointer relative overflow-hidden group">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-slate-400 font-mono">Stage #4</span>
+                            <i id="stage-icon-3" class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+                        </div>
+                        <h3 class="font-semibold text-white text-sm">4. Push Hub</h3>
+                        <p class="text-xs text-slate-400 mt-1 truncate">Registry upload</p>
+                        <div class="mt-3 text-[10px] font-mono text-emerald-400 flex items-center gap-1">
+                            <i class="fa-regular fa-clock"></i> <span id="stage-time-3">18.4s</span>
+                        </div>
+                    </button>
+
+                    <!-- Stage 5: Deploy -->
+                    <button onclick="selectStage(4)" id="stage-btn-4" class="stage-card p-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-left transition-all hover:scale-[1.02] cursor-pointer relative overflow-hidden group">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs text-slate-400 font-mono">Stage #5</span>
+                            <i id="stage-icon-4" class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+                        </div>
+                        <h3 class="font-semibold text-white text-sm">5. Deploy</h3>
+                        <p class="text-xs text-slate-400 mt-1 truncate">Container release</p>
+                        <div class="mt-3 text-[10px] font-mono text-emerald-400 flex items-center gap-1">
+                            <i class="fa-regular fa-clock"></i> <span id="stage-time-4">3.8s</span>
+                        </div>
+                    </button>
+
+                </div>
+
+                <!-- Console Output Terminal Viewer -->
+                <div class="mt-6 rounded-xl border border-slate-800 overflow-hidden terminal-bg shadow-2xl">
+                    <div class="bg-slate-900/90 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-yellow-500 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
+                            <span id="logTitle" class="text-xs font-mono text-slate-400 ml-2">Console Output: Stage #1 (Checkout)</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xs text-slate-500 font-mono">UTF-8</span>
+                            <button onclick="copyConsoleLogs()" class="text-xs text-slate-400 hover:text-white transition">
+                                <i class="fa-regular fa-copy"></i> Copy Log
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-4 font-mono text-xs text-slate-300 overflow-x-auto h-48 leading-relaxed" id="terminalLogs">
+                        <!-- Dynamic logs injected here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Two Column Section: Live Preview & Shell Snippets -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Live Flask Application Simulator -->
+            <div class="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+                            <h2 class="text-lg font-bold text-white">Live Application Response</h2>
+                        </div>
+                        <span class="text-xs font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-md">HTTP 200 OK</span>
+                    </div>
+
+                    <!-- Simulated Browser Window -->
+                    <div class="rounded-xl border border-slate-800 bg-slate-950 overflow-hidden shadow-xl">
+                        <!-- Browser Header -->
+                        <div class="bg-slate-900 px-4 py-2 border-b border-slate-800 flex items-center space-x-2">
+                            <div class="w-2.5 h-2.5 rounded-full bg-slate-700"></div>
+                            <div class="w-2.5 h-2.5 rounded-full bg-slate-700"></div>
+                            <div class="w-2.5 h-2.5 rounded-full bg-slate-700"></div>
+                            <div class="bg-slate-950 px-3 py-1 rounded-md text-[11px] font-mono text-slate-400 flex-grow text-center truncate border border-slate-800">
+                                http://localhost:5000/
+                            </div>
+                        </div>
+
+                        <!-- App Output Body -->
+                        <div class="p-8 text-center flex flex-col items-center justify-center min-h-[160px] bg-gradient-to-b from-slate-950 to-slate-900">
+                            <div class="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-3 border border-emerald-500/20">
+                                <i class="fa-solid fa-server text-lg"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-white tracking-wide mb-1" id="flaskMessageOutput">
+                                Hello Manoj Thanet!
+                            </h3>
+                            <p class="text-xs text-slate-400 font-mono">
+                                Container: <span class="text-cyan-400">hello-flask-running</span> | Python 3.12-slim
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                    <span>Framework: <strong>Flask 3.0</strong></span>
+                    <span>WSGI: <strong>Gunicorn / Werkzeug</strong></span>
+                </div>
+            </div>
+
+            <!-- Helpful DevOps Commands & File Quick View -->
+            <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-terminal text-emerald-400"></i>
+                        Verification Terminal Commands
+                    </h2>
+                    <span class="text-xs text-slate-400">Run on your VM</span>
+                </div>
+
+                <!-- Command 1 -->
+                <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 relative group">
+                    <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                        <span>Check Running Containers</span>
+                        <button onclick="copyText('cmd1', this)" class="text-slate-400 hover:text-white text-xs transition">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                    <code id="cmd1" class="font-mono text-xs text-emerald-400 block">docker ps --filter "name=hello-flask"</code>
+                </div>
+
+                <!-- Command 2 -->
+                <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 relative group">
+                    <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                        <span>Test Local Endpoint Response</span>
+                        <button onclick="copyText('cmd2', this)" class="text-slate-400 hover:text-white text-xs transition">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                    <code id="cmd2" class="font-mono text-xs text-cyan-400 block">curl http://localhost:5000/</code>
+                </div>
+
+                <!-- Command 3 -->
+                <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 relative group">
+                    <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                        <span>Check Jenkins User Permissions</span>
+                        <button onclick="copyText('cmd3', this)" class="text-slate-400 hover:text-white text-xs transition">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                    </div>
+                    <code id="cmd3" class="font-mono text-xs text-amber-400 block">sudo usermod -aG docker jenkins && sudo systemctl restart jenkins</code>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Architecture Flow Breakdown -->
+        <section class="glass-panel p-6 sm:p-8 rounded-2xl border border-slate-800">
+            <h2 class="text-xl font-bold text-white mb-6 text-center">Pipeline Architecture Flow</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 relative">
+                
+                <div class="glass-card p-5 rounded-xl border border-slate-800 relative text-center">
+                    <div class="w-10 h-10 mx-auto rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center text-lg mb-3 border border-blue-500/20">
+                        <i class="fa-brands fa-github"></i>
+                    </div>
+                    <h4 class="font-semibold text-white text-sm">1. Git Repository</h4>
+                    <p class="text-xs text-slate-400 mt-1">Pushes trigger webhook or SCM polling to start build execution.</p>
+                </div>
+
+                <div class="glass-card p-5 rounded-xl border border-slate-800 relative text-center">
+                    <div class="w-10 h-10 mx-auto rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-lg mb-3 border border-amber-500/20">
+                        <i class="fa-brands fa-jenkins"></i>
+                    </div>
+                    <h4 class="font-semibold text-white text-sm">2. Jenkins Master Node</h4>
+                    <p class="text-xs text-slate-400 mt-1">Executes <code class="text-amber-300">Jenkinsfile</code> stages on agent node.</p>
+                </div>
+
+                <div class="glass-card p-5 rounded-xl border border-slate-800 relative text-center">
+                    <div class="w-10 h-10 mx-auto rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-lg mb-3 border border-cyan-500/20">
+                        <i class="fa-brands fa-docker"></i>
+                    </div>
+                    <h4 class="font-semibold text-white text-sm">3. Docker Hub Registry</h4>
+                    <p class="text-xs text-slate-400 mt-1">Multi-stage image pushed to repository <code class="text-cyan-300">manoj053/hello-flask</code>.</p>
+                </div>
+
+                <div class="glass-card p-5 rounded-xl border border-slate-800 relative text-center">
+                    <div class="w-10 h-10 mx-auto rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-lg mb-3 border border-emerald-500/20">
+                        <i class="fa-solid fa-rocket"></i>
+                    </div>
+                    <h4 class="font-semibold text-white text-sm">4. Production Deployment</h4>
+                    <p class="text-xs text-slate-400 mt-1">Container runs with port binding <code class="text-emerald-300">-p 5000:5000</code>.</p>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass-panel border-t border-slate-800 py-6 mt-12">
+        <div class="max-w-7xl mx-auto px-4 text-center sm:flex sm:justify-between sm:items-center">
+            <p class="text-xs text-slate-400">
+                Created for <strong class="text-white">Manoj Thanet</strong> &mdash; Continuous Integration & Deployment Project
+            </p>
+            <div class="flex justify-center space-x-6 mt-3 sm:mt-0 text-xs text-slate-400">
+                <span><i class="fa-solid fa-server text-emerald-400 mr-1"></i> VM Status: Ready</span>
+                <span><i class="fa-brands fa-docker text-cyan-400 mr-1"></i> Docker Daemon: Active</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 border border-slate-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 transition-all duration-300 opacity-0 translate-y-10 pointer-events-none z-50">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toastMessage" class="text-xs font-medium">Notification message</span>
+    </div>
+
+    <!-- Interactive JavaScript -->
+    <script>
+        // Simulated Pipeline Stage Console Data
+        const stageLogs = [
+            `[Pipeline] stage (Checkout)\n[Pipeline] checkout\nSelected Git installation does not exist, using default\n > git rev-parse --resolve-git-dir /var/jenkins_home/workspace/hello-flask-pipeline/.git # timeout=10\n > git config remote.origin.url https://github.com/mansan951/hello-flask.git # timeout=10\n > git fetch --tags --force --progress -- https://github.com/mansan951/hello-flask.git +refs/heads/*:refs/remotes/origin/* # timeout=10\n > git rev-parse refs/remotes/origin/main^{commit} # timeout=10\nChecking out Revision a8f9102c918371bd9021 (refs/remotes/origin/main)\nCommit message: "Fix Jenkinsfile syntax and pipeline config"\n[Pipeline] // stage (Checkout) -> SUCCESS`,
+            
+            `[Pipeline] stage (Test)\n[Pipeline] sh\n+ docker build --target test -t manoj053/hello-flask:test .\n#1 [internal] load build definition from Dockerfile\n#2 [base 1/4] FROM docker.io/library/python:3.12-slim\n#3 [test 1/1] RUN pip install --no-cache-dir pytest && pytest -q\n============================= test session starts =============================\nplatform linux -- Python 3.12.0, pytest-7.4.3, pluggy-1.3.0\nrootdir: /app\ncollected 2 items\n\ntest_app.py ..                                                           [100%]\n============================== 2 passed in 0.42s ==============================\n[Pipeline] // stage (Test) -> SUCCESS`,
+            
+            `[Pipeline] stage (Build Image)\n[Pipeline] sh\n+ docker build -t manoj053/hello-flask:12 -t manoj053/hello-flask:latest .\n#1 [base 1/4] FROM docker.io/library/python:3.12-slim\n#2 [base 2/4] WORKDIR /app\n#3 [base 3/4] COPY requirements.txt .\n#4 [base 4/4] RUN pip install --no-cache-dir -r requirements.txt\n#5 [final 1/1] EXPOSE 5000\nSuccessfully built e3b749a9012c\nSuccessfully tagged manoj053/hello-flask:12\nSuccessfully tagged manoj053/hello-flask:latest\n[Pipeline] // stage (Build Image) -> SUCCESS`,
+            
+            `[Pipeline] stage (Push to Docker Hub)\n[Pipeline] withCredentials\n[Pipeline] sh\n+ echo ****\n+ docker login -u manoj053 --password-stdin\nWARNING! Your password will be stored unencrypted in /root/.docker/config.json.\nLogin Succeeded!\n+ docker push manoj053/hello-flask:12\nThe push refers to repository [docker.io/manoj053/hello-flask]\n5f70bf18a086: Pushed\ne1c64a38fa4b: Pushed\n12: digest: sha256:7f920bc4919102 size: 948\n+ docker push manoj053/hello-flask:latest\nlatest: digest: sha256:7f920bc4919102 size: 948\n[Pipeline] // stage (Push to Docker Hub) -> SUCCESS`,
+            
+            `[Pipeline] stage (Deploy)\n[Pipeline] sh\n+ docker rm -f hello-flask\nhello-flask\n+ docker run -d --name hello-flask -p 5000:5000 --restart unless-stopped manoj053/hello-flask:12\n3a8f9c102847a9e10283746102938471029384710293847102938471029384710\nContainer deployment successful! Serving request on http://0.0.0.0:5000\n[Pipeline] // stage (Deploy) -> SUCCESS\n[Pipeline] post\n+ docker logout\nRemoving login credentials for https://index.docker.io/v1/\nFinished: SUCCESS`
+        ];
+
+        let activeStageIndex = 0;
+        let isBuilding = false;
+        let currentBuildNum = 11;
+
+        // Initialize state on load
+        window.onload = function() {
+            selectStage(0);
+        };
+
+        function selectStage(index) {
+            activeStageIndex = index;
+            const logElement = document.getElementById('terminalLogs');
+            const logTitle = document.getElementById('logTitle');
+            
+            const stageNames = ['Checkout', 'Test', 'Build Image', 'Push to Docker Hub', 'Deploy'];
+            logTitle.textContent = `Console Output: Stage #${index + 1} (${stageNames[index]})`;
+            logElement.innerText = stageLogs[index];
+
+            // Highlight selected card
+            for(let i = 0; i < 5; i++) {
+                const btn = document.getElementById(`stage-btn-${i}`);
+                if (i === index) {
+                    btn.classList.add('ring-2', 'ring-cyan-400');
+                } else {
+                    btn.classList.remove('ring-2', 'ring-cyan-400');
+                }
+            }
+        }
+
+        function runSimulatedBuild() {
+            if (isBuilding) return;
+            isBuilding = true;
+            currentBuildNum++;
+
+            const buildBtn = document.getElementById('triggerBuildBtn');
+            buildBtn.disabled = true;
+            buildBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            buildBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i><span>Building #${currentBuildNum}...</span>`;
+
+            showToast(`Started Jenkins Build #${currentBuildNum}`, 'fa-brands fa-jenkins', 'text-amber-400');
+
+            // Reset stage icons to spinner sequentially
+            let currentStep = 0;
+            
+            function stepNext() {
+                if (currentStep < 5) {
+                    selectStage(currentStep);
+                    const icon = document.getElementById(`stage-icon-${currentStep}`);
+                    icon.className = 'fa-solid fa-spinner animate-spin text-amber-400 text-sm';
+
+                    setTimeout(() => {
+                        icon.className = 'fa-solid fa-circle-check text-emerald-400 text-sm';
+                        currentStep++;
+                        stepNext();
+                    }, 1200);
+                } else {
+                    // Complete Build
+                    isBuilding = false;
+                    buildBtn.disabled = false;
+                    buildBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    buildBtn.innerHTML = `<i class="fa-solid fa-play text-xs"></i><span>Trigger Jenkins Build</span>`;
+                    
+                    document.getElementById('currentImageTag').textContent = `manoj053/hello-flask:v${currentBuildNum}`;
+                    showToast(`Build #${currentBuildNum} Completed Successfully!`, 'fa-solid fa-circle-check', 'text-emerald-400');
+                }
+            }
+
+            stepNext();
+        }
+
+        function copyText(elementId, btnElement) {
+            const textToCopy = document.getElementById(elementId).innerText;
+            
+            // Legacy copy support fallback for iframe security environments
+            const tempInput = document.createElement('textarea');
+            tempInput.value = textToCopy;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            showToast('Command copied to clipboard!', 'fa-solid fa-clipboard-check', 'text-cyan-400');
+        }
+
+        function copyConsoleLogs() {
+            const logText = document.getElementById('terminalLogs').innerText;
+            const tempInput = document.createElement('textarea');
+            tempInput.value = logText;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            showToast('Console logs copied!', 'fa-solid fa-terminal', 'text-emerald-400');
+        }
+
+        function showToast(message, iconClass, iconColor) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMessage.textContent = message;
+            toastIcon.className = `${iconClass} ${iconColor} text-lg`;
+
+            toast.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
