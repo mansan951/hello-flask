@@ -1,3 +1,15 @@
-FROM nginx:alpine
-COPY index.html /usr/share/nginx/html/index.html
-EXPOSE 80
+# Stage 1: Base image with dependencies
+FROM python:3.9-slim AS base
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+
+# Stage 2: Test stage (used by Jenkins for running pytest)
+FROM base AS test
+RUN pytest
+
+# Stage 3: Final production image
+FROM base AS final
+EXPOSE 5000
+CMD ["python", "app.py"]
