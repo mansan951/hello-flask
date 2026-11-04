@@ -1,14 +1,10 @@
-FROM python:3.9-slim AS base
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
+from flask import Flask, render_template
 
-# Stage 2: Test execution target used by Jenkins
-FROM base AS test
-RUN pytest
+app = Flask(__name__)
 
-# Stage 3: Production runtime target
-FROM base AS final
-EXPOSE 5000
-CMD ["python", "app.py"]
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
